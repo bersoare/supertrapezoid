@@ -1,0 +1,7 @@
+*.aux
+*.log
+*.tex
+*.test
+asm.txt
+profile
+*.pdf
