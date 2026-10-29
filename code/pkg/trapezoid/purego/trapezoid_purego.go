@@ -5,6 +5,7 @@ package purego
 
 import (
 	"simd"
+	"simd/archsimd"
 )
 
 // When using platform agnostic SIMD (`simd`) instead of `archsimd`,
@@ -61,17 +62,14 @@ func TrapezoidSIMDPureGo(lower, upper float64, resolution int) float64 {
 	width := v.Len()
 
 	// prepare step index grids directly inside CPU registers
-	steps := make([]float64, width)
-	for i := 0; i < width; i++ {
-		steps[i] = float64(i)
-	}
+	steps := [2]float64{0, 1}
 
 	// step indexes, like a "lane id".
 	// in scalar code, this is the id that walks
 	// forward in the iterations. since we are dealing
 	// with multiple lanes, we store the offset of each of them
 	// (ex: 0,1,2,3 for a 4-lane SIMD)
-	vecSteps := simd.LoadFloat64s(steps)
+	vecSteps := simd.LoadFloat64s(steps[:])
 
 	// declare our vector variables
 	// avoid broadcasting in the hot path for constants
@@ -95,7 +93,7 @@ func TrapezoidSIMDPureGo(lower, upper float64, resolution int) float64 {
 	// comparing with a larger resolution number.
 	blocks := resolution / width
 
-	for _ = range blocks {
+	for i := 0; i < blocks; i++ {
 		vX = vX.Add(vBlockStep)
 		vSum = vSum.Add(integrableFuncSIMD(vX, minusOne))
 	}
@@ -106,10 +104,135 @@ func TrapezoidSIMDPureGo(lower, upper float64, resolution int) float64 {
 		sum += integrableFunc(lower + (float64(i) * h))
 	}
 
-	vSum.Store(steps)
+	vSum.Store(steps[:])
 	for _, i := range steps {
 		sum += i
 	}
+
+	return sum * h
+}
+
+func integrableFuncArchSIMD256(x, minusOne archsimd.Float64x4) archsimd.Float64x4 {
+	return x.MulAdd(x, minusOne.Mul(x))
+}
+
+func TrapezoidArchSIMD256PureGo(lower, upper float64, resolution int) float64 {
+	res := float64(resolution)
+
+	h := (upper - lower) / res
+
+	sum := .5 * (integrableFunc(lower) + integrableFunc(upper))
+
+	var v archsimd.Float64x4
+	width := v.Len()
+
+	// prepare step index grids directly inside CPU registers
+	steps := [4]float64{0, 1, 2, 3}
+
+	// step indexes, like a "lane id".
+	// in scalar code, this is the id that walks
+	// forward in the iterations. since we are dealing
+	// with multiple lanes, we store the offset of each of them
+	// (ex: 0,1,2,3 for a 4-lane SIMD)
+	vecSteps := archsimd.LoadFloat64x4(steps[:])
+
+	// declare our vector variables
+	// avoid broadcasting in the hot path for constants
+	// since it may cause pipeline stalls (its slow)
+	vH := archsimd.BroadcastFloat64x4(h)
+	vLower := archsimd.BroadcastFloat64x4(lower)
+	// how much we stepping at each loop
+	// h * width
+	vBlockStep := archsimd.BroadcastFloat64x4(h * float64(width))
+	// vX (x vector) starts at the first block coordinates
+	// subtract the block step to allow for proper pipelining,
+	// reducing data dependency that cause pipeline stalls
+	vX := vLower.Add(vecSteps.Mul(vH)).Sub(vBlockStep)
+	minusOne := archsimd.BroadcastFloat64x4(-1)
+
+	// accumulator
+	vSum := archsimd.BroadcastFloat64x4(0)
+
+	// number of iterations, so we can
+	// do a for loop over blocks as opposed to
+	// comparing with a larger resolution number.
+	blocks := resolution / width
+
+	for i := 0; i < blocks; i++ {
+		vX = vX.Add(vBlockStep)
+		vSum = vSum.Add(integrableFuncArchSIMD256(vX, minusOne))
+	}
+
+	i := 1 + (blocks * width)
+
+	for ; i < resolution; i++ {
+		sum += integrableFunc(lower + (float64(i) * h))
+	}
+
+	sum += vSum.GetHi().GetElem(0) + vSum.GetHi().GetElem(1)
+	sum += vSum.GetLo().GetElem(0) + vSum.GetLo().GetElem(1)
+
+	return sum * h
+}
+
+func integrableFuncArchSIMD128(x, minusOne archsimd.Float64x2) archsimd.Float64x2 {
+	return x.MulAdd(x, minusOne.Mul(x))
+}
+
+func TrapezoidArchSIMD128PureGo(lower, upper float64, resolution int) float64 {
+	res := float64(resolution)
+
+	h := (upper - lower) / res
+
+	sum := .5 * (integrableFunc(lower) + integrableFunc(upper))
+
+	var v archsimd.Float64x2
+	width := v.Len()
+
+	// prepare step index grids directly inside CPU registers
+	steps := []float64{0, 1, 2, 3}
+
+	// step indexes, like a "lane id".
+	// in scalar code, this is the id that walks
+	// forward in the iterations. since we are dealing
+	// with multiple lanes, we store the offset of each of them
+	// (ex: 0,1,2,3 for a 4-lane SIMD)
+	vecSteps := archsimd.LoadFloat64x2(steps)
+
+	// declare our vector variables
+	// avoid broadcasting in the hot path for constants
+	// since it may cause pipeline stalls (its slow)
+	vH := archsimd.BroadcastFloat64x2(h)
+	vLower := archsimd.BroadcastFloat64x2(lower)
+	// how much we stepping at each loop
+	// h * width
+	vBlockStep := archsimd.BroadcastFloat64x2(h * float64(width))
+	// vX (x vector) starts at the first block coordinates
+	// subtract the block step to allow for proper pipelining,
+	// reducing data dependency that cause pipeline stalls
+	vX := vLower.Add(vecSteps.Mul(vH)).Sub(vBlockStep)
+	minusOne := archsimd.BroadcastFloat64x2(-1)
+
+	// accumulator
+	vSum := archsimd.BroadcastFloat64x2(0)
+
+	// number of iterations, so we can
+	// do a for loop over blocks as opposed to
+	// comparing with a larger resolution number.
+	blocks := resolution / width
+
+	for i := 0; i < blocks; i++ {
+		vX = vX.Add(vBlockStep)
+		vSum = vSum.Add(integrableFuncArchSIMD128(vX, minusOne))
+	}
+
+	i := 1 + (blocks * width)
+
+	for ; i < resolution; i++ {
+		sum += integrableFunc(lower + (float64(i) * h))
+	}
+
+	sum += vSum.GetElem(0) + vSum.GetElem(1)
 
 	return sum * h
 }

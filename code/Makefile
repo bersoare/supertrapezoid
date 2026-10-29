@@ -20,7 +20,7 @@ test:test-purego test-cgo
 
 .PHONY:test-purego
 test-purego:
-	GOEXPERIMENT="simd" CGO_ENABLED=0 go test -tags=purego -v  ./...
+	GOAMD64=v3 GOEXPERIMENT="simd" CGO_ENABLED=0 go test -tags=purego -v  ./...
 
 .PHONY:test-cgo
 test-cgo:
@@ -54,9 +54,4 @@ profile-cgo: bench-cgo
 	go tool pprof -http=localhost:8081 cgo/supertrapezoid.test cgo/profile
 
 profile-purego: bench-purego
-	go tool pprof -http=localhost:8081 purego/supertrapezoid.test purego/profile
-
-
-# GOEXPERIMENT="simd"
-# CGO_ENABLED=0
-# 
+	go tool pprof -http=localhost:8082 purego/supertrapezoid.test purego/profile
