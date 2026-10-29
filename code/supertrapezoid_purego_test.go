@@ -22,10 +22,21 @@ func TestTrapezoidPurego(t *testing.T) {
 		require.InDelta(t, trapezoid.TestResult, result, 1e-9)
 	})
 
+	utils.PrintAVXSupport()
 	t.Run("test SIMD version", func(t *testing.T) {
-
-		utils.PrintAVXSupport()
 		result := purego.TrapezoidSIMDPureGo(trapezoid.Lower, trapezoid.Upper, trapezoid.Resolution)
+		require.NotZero(t, result)
+		require.InDelta(t, trapezoid.TestResult, result, 1e-9)
+	})
+
+	t.Run("test ArchSIMD 128 version", func(t *testing.T) {
+		result := purego.TrapezoidArchSIMD128PureGo(trapezoid.Lower, trapezoid.Upper, trapezoid.Resolution)
+		require.NotZero(t, result)
+		require.InDelta(t, trapezoid.TestResult, result, 1e-9)
+	})
+
+	t.Run("test ArchSIMD 256 version", func(t *testing.T) {
+		result := purego.TrapezoidArchSIMD256PureGo(trapezoid.Lower, trapezoid.Upper, trapezoid.Resolution)
 		require.NotZero(t, result)
 		require.InDelta(t, trapezoid.TestResult, result, 1e-9)
 	})
@@ -92,6 +103,64 @@ func BenchmarkTrapezoidSIMDPureGo(b *testing.B) {
 		var result float64
 		for range b.N {
 			result = purego.TrapezoidSIMDPureGo(trapezoid.Lower, trapezoid.Upper, 500000000)
+		}
+
+		require.NotZero(b, result)
+	})
+}
+
+func BenchmarkTrapezoidArchSIMD256PureGo(b *testing.B) {
+	b.Run("1000", func(b *testing.B) {
+		var result float64
+		for range b.N {
+			result = purego.TrapezoidArchSIMD256PureGo(trapezoid.Lower, trapezoid.Upper, 1000)
+		}
+
+		require.NotZero(b, result)
+	})
+
+	b.Run("1000000", func(b *testing.B) {
+		var result float64
+		for range b.N {
+			result = purego.TrapezoidArchSIMD256PureGo(trapezoid.Lower, trapezoid.Upper, 1000000)
+		}
+
+		require.NotZero(b, result)
+	})
+
+	b.Run("500000000", func(b *testing.B) {
+		var result float64
+		for range b.N {
+			result = purego.TrapezoidArchSIMD256PureGo(trapezoid.Lower, trapezoid.Upper, 500000000)
+		}
+
+		require.NotZero(b, result)
+	})
+}
+
+func BenchmarkTrapezoidArchSIMD128PureGo(b *testing.B) {
+	b.Run("1000", func(b *testing.B) {
+		var result float64
+		for range b.N {
+			result = purego.TrapezoidArchSIMD128PureGo(trapezoid.Lower, trapezoid.Upper, 1000)
+		}
+
+		require.NotZero(b, result)
+	})
+
+	b.Run("1000000", func(b *testing.B) {
+		var result float64
+		for range b.N {
+			result = purego.TrapezoidArchSIMD128PureGo(trapezoid.Lower, trapezoid.Upper, 1000000)
+		}
+
+		require.NotZero(b, result)
+	})
+
+	b.Run("500000000", func(b *testing.B) {
+		var result float64
+		for range b.N {
+			result = purego.TrapezoidArchSIMD128PureGo(trapezoid.Lower, trapezoid.Upper, 500000000)
 		}
 
 		require.NotZero(b, result)
