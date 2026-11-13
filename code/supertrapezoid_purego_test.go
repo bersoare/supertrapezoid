@@ -7,6 +7,7 @@ package supertrapezoid
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 
 	"supertrapezoid/pkg/trapezoid"
@@ -52,13 +53,16 @@ func BenchmarkEmptyFunctionCallPureGo(b *testing.B) {
 	}
 }
 func BenchmarkPureGo(b *testing.B) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	b.Run("scalar", func(b *testing.B) {
 		for _, tc := range testCases {
 			b.Run(fmt.Sprintf("%d", tc), func(b *testing.B) {
 				var result float64
-				for range b.N {
+				withPerfMetrics(b, func() {
 					result = purego.TrapezoidPureGo(trapezoid.Lower, trapezoid.Upper, tc)
-				}
+				})
 
 				require.NotZero(b, result)
 			})
@@ -69,9 +73,9 @@ func BenchmarkPureGo(b *testing.B) {
 		for _, tc := range testCases {
 			b.Run(fmt.Sprintf("%d", tc), func(b *testing.B) {
 				var result float64
-				for range b.N {
+				withPerfMetrics(b, func() {
 					result = purego.TrapezoidSIMDPureGo(trapezoid.Lower, trapezoid.Upper, tc)
-				}
+				})
 
 				require.NotZero(b, result)
 			})
@@ -82,9 +86,9 @@ func BenchmarkPureGo(b *testing.B) {
 		for _, tc := range testCases {
 			b.Run(fmt.Sprintf("%d", tc), func(b *testing.B) {
 				var result float64
-				for range b.N {
+				withPerfMetrics(b, func() {
 					result = purego.TrapezoidArchSIMD128PureGo(trapezoid.Lower, trapezoid.Upper, tc)
-				}
+				})
 
 				require.NotZero(b, result)
 			})
@@ -95,9 +99,9 @@ func BenchmarkPureGo(b *testing.B) {
 		for _, tc := range testCases {
 			b.Run(fmt.Sprintf("%d", tc), func(b *testing.B) {
 				var result float64
-				for range b.N {
+				withPerfMetrics(b, func() {
 					result = purego.TrapezoidArchSIMD256PureGo(trapezoid.Lower, trapezoid.Upper, tc)
-				}
+				})
 
 				require.NotZero(b, result)
 			})

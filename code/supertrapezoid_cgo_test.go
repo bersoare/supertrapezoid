@@ -7,6 +7,7 @@ package supertrapezoid
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 
 	"supertrapezoid/pkg/trapezoid"
@@ -45,13 +46,16 @@ func BenchmarkEmptyFunctionCallCgo(b *testing.B) {
 }
 
 func BenchmarkCgo(b *testing.B) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	b.Run("scalar", func(b *testing.B) {
 		for _, tc := range testCases {
 			b.Run(fmt.Sprintf("%d", tc), func(b *testing.B) {
 				var result float64
-				for range b.N {
+				withPerfMetrics(b, func() {
 					result = cgo.TrapezoidCgo(trapezoid.Lower, trapezoid.Upper, tc)
-				}
+				})
 
 				require.NotZero(b, result)
 			})
@@ -62,9 +66,9 @@ func BenchmarkCgo(b *testing.B) {
 		for _, tc := range testCases {
 			b.Run(fmt.Sprintf("%d", tc), func(b *testing.B) {
 				var result float64
-				for range b.N {
+				withPerfMetrics(b, func() {
 					result = cgo.TrapezoidSIMDAVX128Cgo(trapezoid.Lower, trapezoid.Upper, tc)
-				}
+				})
 
 				require.NotZero(b, result)
 			})
@@ -75,9 +79,9 @@ func BenchmarkCgo(b *testing.B) {
 		for _, tc := range testCases {
 			b.Run(fmt.Sprintf("%d", tc), func(b *testing.B) {
 				var result float64
-				for range b.N {
+				withPerfMetrics(b, func() {
 					result = cgo.TrapezoidSIMDAVX256Cgo(trapezoid.Lower, trapezoid.Upper, tc)
-				}
+				})
 
 				require.NotZero(b, result)
 			})
