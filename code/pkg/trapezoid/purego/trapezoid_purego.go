@@ -160,7 +160,8 @@ func TrapezoidArchSIMD256PureGo(lower, upper float64, resolution int) float64 {
 
 	for i := 0; i < blocks; i++ {
 		vX = vX.Add(vBlockStep)
-		vSum = vSum.Add(integrableFuncArchSIMD256(vX, minusOne))
+		r := integrableFuncArchSIMD256(vX, minusOne)
+		vSum = vSum.Add(r)
 	}
 
 	i := 1 + (blocks * width)
@@ -223,7 +224,8 @@ func TrapezoidArchSIMD128PureGo(lower, upper float64, resolution int) float64 {
 
 	for i := 0; i < blocks; i++ {
 		vX = vX.Add(vBlockStep)
-		vSum = vSum.Add(integrableFuncArchSIMD128(vX, minusOne))
+		r := integrableFuncArchSIMD128(vX, minusOne)
+		vSum = vSum.Add(r)
 	}
 
 	i := 1 + (blocks * width)
