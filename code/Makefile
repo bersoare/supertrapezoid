@@ -30,10 +30,10 @@ build-cgo:
 bench: build bench-cgo-base bench-purego-base
 
 bench-cgo-base: build-cgo
-	cgo/supertrapezoid.test -test.bench="Cgo" -test.v -test.benchmem -test.benchtime=50x $(BENCH_ARGS) $(OUTPUT_ARGS)
+	cgo/supertrapezoid.test -test.bench="Cgo" -test.short -test.benchmem -test.benchtime=50x $(BENCH_ARGS) $(OUTPUT_ARGS)
 
 bench-purego-base: build-purego
-	GOAMD64=v3 purego/supertrapezoid.test -test.bench="PureGo" -test.v -test.benchmem -test.benchtime=50x $(BENCH_ARGS) $(OUTPUT_ARGS)
+	GOAMD64=v3 purego/supertrapezoid.test -test.bench="PureGo" -test.short -test.benchmem -test.benchtime=50x $(BENCH_ARGS) $(OUTPUT_ARGS)
 
 OUTPUT_FILE := results/$(shell date +%Y-%m-%d-%T).json
 bench-json: OUTPUT_ARGS += | go tool test2json | tee -a $(OUTPUT_FILE)
